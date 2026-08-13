@@ -34,12 +34,12 @@ func main() {
 		Addr: "127.0.0.1:6379",
 	})
 	if _, err := rdb.Ping(ctx).Result(); err != nil {
-		log.Fatalf("❌ Erro ao conectar no Redis: %v", err)
+		log.Fatalf("Erro ao conectar no Redis: %v", err)
 	}
 
 	db, err := sql.Open("sqlite3", "../database/database.sqlite")
 	if err != nil {
-		log.Fatalf("❌ Erro ao conectar no SQLite: %v", err)
+		log.Fatalf("Erro ao conectar no SQLite: %v", err)
 	}
 	defer db.Close()
 
@@ -48,7 +48,7 @@ func main() {
 	jobsChannel := make(chan string, 100)
 	var wg sync.WaitGroup
 
-	fmt.Printf("🚀 Worker Pool iniciado com %d Workers em Go!\n", numWorkers)
+	fmt.Printf("Worker Pool iniciado com %d Workers concorrentes em Go!\n", numWorkers)
 
 	for w := 1; w <= numWorkers; w++ {
 		wg.Add(1)
@@ -61,7 +61,7 @@ func main() {
 			if err == redis.Nil {
 				continue
 			} else if err != nil {
-				log.Printf("⚠️ Erro na leitura do Redis: %v", err)
+				log.Printf("Erro na leitura do Redis: %v", err)
 				time.Sleep(1 * time.Second)
 				continue
 			}
@@ -79,28 +79,28 @@ func worker(id int, jobs <-chan string, db *sql.DB, wg *sync.WaitGroup) {
 	for jobData := range jobs {
 		var payload LaravelJobPayload
 		if err := json.Unmarshal([]byte(jobData), &payload); err != nil {
-			log.Printf("[Worker %d] ⚠️ Erro ao decodificar JSON: %v", id, err)
+			log.Printf("[Worker %d] Erro no JSON: %v", id, err)
 			continue
 		}
 
 		notificationID := extractNotificationID(payload.Data.Command)
 		if notificationID == 0 {
-			log.Printf("[Worker %d] ⚠️ ID inválido.", id)
+			log.Printf("[Worker %d] ID não encontrado no payload.", id)
 			continue
 		}
 
-		fmt.Printf("[Worker %d] ⚙️ Processando Notificação ID: %d...\n", id, notificationID)
+		fmt.Printf("[Worker %d] Processando Notificação ID: %d...\n", id, notificationID)
 
-		time.Sleep(1 * time.Second)
+		time.Sleep(2 * time.Second)
 
 		query := `UPDATE notifications SET status = ?, attempts = attempts + 1, updated_at = ? WHERE id = ?`
 		now := time.Now().Format("2006-01-02 15:04:05")
 
 		_, err := db.Exec(query, "processed", now, notificationID)
 		if err != nil {
-			log.Printf("[Worker %d] ❌ Erro ao atualizar ID %d: %v", id, notificationID, err)
+			log.Printf("[Worker %d] Erro ao atualizar ID %d: %v", id, notificationID, err)
 		} else {
-			fmt.Printf("[Worker %d] ✅ Notificação ID %d finalizada com sucesso!\n", id, notificationID)
+			fmt.Printf("[Worker %d] Notificação ID %d concluída!\n", id, notificationID)
 		}
 	}
 }
